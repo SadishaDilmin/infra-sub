@@ -2,8 +2,9 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AUTH_COOKIE, ROLES } from "@/config/constants";
 import { getSessionUser } from "@/lib/auth/session";
-import { Sidebar } from "@/components/dashboard/sidebar";
-import { Topbar } from "@/components/dashboard/topbar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { AppHeader } from "@/components/dashboard/app-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 /**
  * Admin shell. Authoritative RBAC is enforced on every /api/admin/* route via
@@ -22,13 +23,15 @@ export default async function AdminLayout({
   if (!session && !hasRefresh) redirect("/login?next=/admin");
   if (session && session.role !== ROLES.SUPER_ADMIN) redirect("/dashboard");
 
+  const defaultOpen = store.get("sidebar_state")?.value !== "false";
+
   return (
-    <div className="flex min-h-screen">
-      <Sidebar variant="admin" />
-      <div className="flex flex-1 flex-col">
-        <Topbar title="Admin" />
-        <main className="flex-1 p-4 md:p-8">{children}</main>
-      </div>
-    </div>
+    <SidebarProvider defaultOpen={defaultOpen}>
+      <AppSidebar variant="admin" />
+      <SidebarInset>
+        <AppHeader title="Admin" />
+        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">{children}</div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
