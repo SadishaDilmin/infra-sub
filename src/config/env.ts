@@ -59,7 +59,11 @@ const serverSchema = z.object({
     .url()
     .default("https://www.payhere.lk/merchant/v1"),
 
+  // Upstash Redis REST endpoint + token for the shared-store rate limiter.
+  // Required for serverless/multi-instance production (Netlify); when either is
+  // absent the limiter falls back to a per-instance in-memory store (dev only).
   RATE_LIMIT_REDIS_URL: z.string().optional(),
+  RATE_LIMIT_REDIS_TOKEN: z.string().optional(),
 });
 
 const publicSchema = z.object({
