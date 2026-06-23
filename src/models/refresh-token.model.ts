@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import mongoose, { type Model, type InferSchemaType } from "mongoose";
+const { Schema, model, models } = mongoose;
 
 /**
  * Refresh-token record for rotation + reuse detection.
