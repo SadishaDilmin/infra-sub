@@ -1,12 +1,18 @@
 /**
- * Seed script: bootstraps a super admin and the example plans.
+ * Seed script: bootstraps sample users (one per role + customer states) and the
+ * example plans.
  *
  * Usage:  npm run seed
  *
  * Reads SEED_ADMIN_* and DB/JWT/PayHere vars from .env.local. Idempotent — it
- * skips records that already exist, so it is safe to re-run.
+ * skips records that already exist, so it is safe to re-run. All sample
+ * accounts use the RFC-2606 reserved @example.com domain (synthetic, not real
+ * people) — change the passwords before any non-local environment.
  */
-import { loadEnvConfig } from "@next/env";
+// `@next/env` is CommonJS; under this package's ESM ("type": "module") the
+// named export isn't statically detectable, so import the default and destructure.
+import nextEnv from "@next/env";
+const { loadEnvConfig } = nextEnv;
 
 const EXAMPLE_PLANS = [
   {
@@ -70,23 +76,62 @@ async function main() {
 
   await connectDB();
 
-  // --- Super admin ---
-  const email = (process.env.SEED_ADMIN_EMAIL ?? "admin@example.com").toLowerCase();
-  const existingAdmin = await User.findOne({ email });
-  if (existingAdmin) {
-    console.log(`✓ Admin already exists: ${email}`);
-  } else {
-    const password = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe123!";
-    await User.create({
+  // --- Sample users (one per role, plus customer states for testing) ---
+  const sampleUsers = [
+    {
       firstName: process.env.SEED_ADMIN_FIRST_NAME ?? "Super",
       lastName: process.env.SEED_ADMIN_LAST_NAME ?? "Admin",
-      email,
-      password: await hashPassword(password),
+      email: (process.env.SEED_ADMIN_EMAIL ?? "admin@example.com").toLowerCase(),
+      password: process.env.SEED_ADMIN_PASSWORD ?? "Admin@2026",
       role: constants.ROLES.SUPER_ADMIN,
       status: constants.USER_STATUS.ACTIVE,
-      emailVerifiedAt: new Date(),
+      verified: true,
+    },
+    {
+      firstName: "Olivia",
+      lastName: "Customer",
+      email: "customer@example.com",
+      password: "Customer@2026",
+      role: constants.ROLES.CUSTOMER,
+      status: constants.USER_STATUS.ACTIVE,
+      verified: true,
+    },
+    {
+      firstName: "Pat",
+      lastName: "Pending",
+      email: "pending@example.com",
+      password: "Pending@2026",
+      role: constants.ROLES.CUSTOMER,
+      status: constants.USER_STATUS.PENDING,
+      verified: false,
+    },
+    {
+      firstName: "Sam",
+      lastName: "Suspended",
+      email: "suspended@example.com",
+      password: "Suspended@2026",
+      role: constants.ROLES.CUSTOMER,
+      status: constants.USER_STATUS.SUSPENDED,
+      verified: true,
+    },
+  ];
+
+  for (const u of sampleUsers) {
+    const existing = await User.findOne({ email: u.email });
+    if (existing) {
+      console.log(`✓ User already exists: ${u.email} (${u.role})`);
+      continue;
+    }
+    await User.create({
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      password: await hashPassword(u.password),
+      role: u.role,
+      status: u.status,
+      emailVerifiedAt: u.verified ? new Date() : null,
     });
-    console.log(`✓ Created super admin: ${email}`);
+    console.log(`✓ Created ${u.role}: ${u.email}`);
   }
 
   // --- Example plans ---
