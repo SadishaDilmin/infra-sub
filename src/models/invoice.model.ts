@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import mongoose, { type Model, type InferSchemaType } from "mongoose";
+const { Schema, model, models } = mongoose;
 import { INVOICE_STATUS } from "@/config/constants";
 
 /**
