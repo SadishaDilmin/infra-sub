@@ -62,7 +62,7 @@ export function withApi<P = Record<string, string>>(
           typeof options.rateLimit === "object"
             ? options.rateLimit
             : RATE_LIMITS[options.rateLimit ?? "API"];
-        enforceRateLimit(`${req.nextUrl.pathname}:${ip}`, cfg);
+        await enforceRateLimit(`${req.nextUrl.pathname}:${ip}`, cfg);
       }
 
       // 2. CSRF for mutations (default on)
