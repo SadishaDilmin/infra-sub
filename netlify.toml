@@ -1,0 +1,27 @@
+# Netlify configuration for infra-sub (Next.js 15, App Router).
+#
+# The official Next.js Runtime (@netlify/plugin-nextjs) maps App Router routes,
+# Node API routes (Mongoose/bcrypt) to Netlify Functions, and the edge-safe
+# middleware (src/middleware.ts, jose-only) to a Netlify Edge Function.
+# Environment variables are NOT set here — configure them per context in
+# Netlify UI → Site config → Environment variables (see NETLIFY-DEPLOYMENT.md).
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Match package.json "engines": node >= 20.
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Production deploys come from the main branch; the staging branch gets its own
+# deploy context (point it at the SEPARATE staging DB + PayHere sandbox via
+# branch-scoped env vars in the Netlify UI).
+[context.production]
+  command = "npm run build"
+
+[context.staging]
+  command = "npm run build"
