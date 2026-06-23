@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model } from "mongoose";
+import mongoose, { type Model } from "mongoose";
+const { Schema, model, models } = mongoose;
 
 /**
  * Atomic sequence counter (used for human-readable invoice numbers). Using
