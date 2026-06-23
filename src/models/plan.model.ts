@@ -14,6 +14,10 @@ const planSchema = new Schema(
     monthlyPrice: { type: Number, required: true, min: 0 },
     yearlyPrice: { type: Number, required: true, min: 0 },
     currency: { type: String, default: "LKR" },
+    // Polar product IDs for this plan (one per interval). Only needed when
+    // PAYMENT_PROVIDER=polar; map each plan to its Polar product in the dashboard.
+    polarProductIdMonthly: { type: String, default: null },
+    polarProductIdYearly: { type: String, default: null },
     features: { type: [String], default: [] },
     // Highlighted on the pricing page.
     highlighted: { type: Boolean, default: false },
