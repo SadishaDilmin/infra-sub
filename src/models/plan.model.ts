@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import mongoose, { type Model, type InferSchemaType } from "mongoose";
+const { Schema, model, models } = mongoose;
 
 /**
  * Subscription plan. Plans are fully dynamic — admins create unlimited plans
