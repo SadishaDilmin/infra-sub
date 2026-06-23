@@ -69,7 +69,11 @@ const serverSchema = z.object({
   POLAR_WEBHOOK_SECRET: z.string().optional(),
   POLAR_SERVER: z.enum(["sandbox", "production"]).default("sandbox"),
 
+  // Upstash Redis REST endpoint + token for the shared-store rate limiter.
+  // Required for serverless/multi-instance production (Netlify); when either is
+  // absent the limiter falls back to a per-instance in-memory store (dev only).
   RATE_LIMIT_REDIS_URL: z.string().optional(),
+  RATE_LIMIT_REDIS_TOKEN: z.string().optional(),
 });
 
 const publicSchema = z.object({
