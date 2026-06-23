@@ -44,6 +44,8 @@ export const paymentService = {
     statusCode: string;
     paymentDate: Date;
     rawPayload: Record<string, unknown>;
+    /** Provider tag stored on the payment. Defaults to PAYHERE for back-compat. */
+    paymentMethod?: string;
   }): Promise<{ payment: PaymentDoc; created: boolean }> {
     const existing = await Payment.findOne({
       payherePaymentId: params.payherePaymentId,
@@ -56,7 +58,7 @@ export const paymentService = {
         subscriptionId: params.subscriptionId,
         amount: params.amount,
         currency: params.currency,
-        paymentMethod: "PAYHERE",
+        paymentMethod: params.paymentMethod ?? "PAYHERE",
         payherePaymentId: params.payherePaymentId,
         orderId: params.orderId,
         payhereSubscriptionId: params.payhereSubscriptionId,

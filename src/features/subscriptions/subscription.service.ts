@@ -9,12 +9,16 @@ import {
   payhereConfig,
 } from "@/lib/payhere/payhere";
 import { cancelPayhereSubscription } from "@/lib/payhere/subscription-manager";
+import { createPolarCheckout, cancelPolarSubscription } from "@/lib/polar/polar";
+import { env } from "@/config/env";
 import { audit, AUDIT_ACTIONS } from "@/lib/audit/audit";
 import { BadRequest, Conflict, NotFound } from "@/lib/errors";
 import {
   BILLING_INTERVAL,
+  PAYMENT_PROVIDER,
   SUBSCRIPTION_STATUS,
   type BillingInterval,
+  type PaymentProvider,
 } from "@/config/constants";
 import type {
   ChangePlanInput,
@@ -30,8 +34,12 @@ const NON_TERMINAL = [
 export type CheckoutResponse = {
   subscriptionId: string;
   orderId: string;
-  actionUrl: string;
-  fields: Record<string, string>;
+  provider: PaymentProvider;
+  // PayHere — hosted form POST (client builds + submits a form).
+  actionUrl?: string;
+  fields?: Record<string, string>;
+  // Polar — hosted checkout (client redirects the browser).
+  redirectUrl?: string;
 };
 
 function priceForInterval(plan: PlanDoc, interval: BillingInterval): number {
@@ -168,6 +176,36 @@ export const subscriptionService = {
       metadata: { planId: input.planId, interval: input.interval, orderId },
     });
 
+    // Polar (Merchant of Record): redirect to a hosted checkout. The plan must
+    // be mapped to a Polar product for the chosen interval.
+    if (env.PAYMENT_PROVIDER === PAYMENT_PROVIDER.POLAR) {
+      const productId =
+        input.interval === BILLING_INTERVAL.YEARLY
+          ? plan.polarProductIdYearly
+          : plan.polarProductIdMonthly;
+      if (!productId) {
+        throw BadRequest("This plan is not configured for Polar checkout.");
+      }
+      const checkout = await createPolarCheckout({
+        productId,
+        successUrl: `${env.NEXT_PUBLIC_APP_URL}/dashboard/billing?status=success`,
+        customer: {
+          name: `${user.firstName} ${user.lastName}`.trim(),
+          email: user.email,
+        },
+        metadata: { subscriptionId: String(sub._id), orderId },
+      });
+      sub.polarCheckoutId = checkout.id;
+      await sub.save();
+      return {
+        subscriptionId: String(sub._id),
+        orderId,
+        provider: PAYMENT_PROVIDER.POLAR,
+        redirectUrl: checkout.url,
+      };
+    }
+
+    // PayHere (default): server-computed hash + hosted form POST.
     const fields = buildCheckoutFields({
       orderId,
       amount,
@@ -185,6 +223,7 @@ export const subscriptionService = {
     return {
       subscriptionId: String(sub._id),
       orderId,
+      provider: PAYMENT_PROVIDER.PAYHERE,
       actionUrl: payhereConfig.checkoutUrl,
       fields,
     };
@@ -224,8 +263,13 @@ export const subscriptionService = {
     const sub = await getCurrentDoc(userId);
     if (!sub) throw NotFound("No active subscription to cancel");
 
+    // Cancel with whichever provider holds the recurring token. (Field kept as
+    // `payhereNotice` for response back-compat; it carries either provider's note.)
     let payhereNotice: string | undefined;
-    if (sub.payhereSubscriptionId) {
+    if (sub.polarSubscriptionId) {
+      const result = await cancelPolarSubscription(sub.polarSubscriptionId);
+      if (!result.cancelled) payhereNotice = result.reason;
+    } else if (sub.payhereSubscriptionId) {
       const result = await cancelPayhereSubscription(sub.payhereSubscriptionId);
       if (!result.cancelled) payhereNotice = result.reason;
     }
@@ -297,6 +341,27 @@ export const subscriptionService = {
       sub.status = SUBSCRIPTION_STATUS.PAST_DUE;
       await sub.save();
     }
+    return sub;
+  },
+
+  /**
+   * Mark a subscription cancelled in response to a provider webhook (the
+   * provider has already cancelled on their side, so we don't call it back).
+   */
+  async markCancelledFromWebhook(
+    sub: HydratedDocument<SubscriptionDoc>,
+    params: { endedAt: Date },
+  ) {
+    if (
+      sub.status === SUBSCRIPTION_STATUS.CANCELLED ||
+      sub.status === SUBSCRIPTION_STATUS.EXPIRED
+    ) {
+      return sub;
+    }
+    sub.status = SUBSCRIPTION_STATUS.CANCELLED;
+    if (!sub.cancelledAt) sub.cancelledAt = new Date();
+    sub.endedAt = params.endedAt;
+    await sub.save();
     return sub;
   },
 };

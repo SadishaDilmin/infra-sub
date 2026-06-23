@@ -1,0 +1,59 @@
+name: Build
+
+# Build-quality gate: typecheck, lint, and a full production build on every PR
+# and on pushes to the deployment branches (main → app.sadishadilmin.com,
+# staging → stage.sadishadilmin.com). Netlify performs the actual deploys.
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main, staging]
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Typecheck, lint & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          # Throwaway CI placeholders. config/env.ts validates env at build time,
+          # but the build never connects to any service. These are NOT secrets —
+          # do not put real credentials here (use Netlify env for that).
+          NEXT_PUBLIC_APP_URL: https://example.com
+          MONGODB_URI: mongodb://localhost:27017/ci
+          MONGODB_DB_NAME: infra_sub
+          JWT_ACCESS_SECRET: ci_build_placeholder_access_secret_0123456789
+          JWT_REFRESH_SECRET: ci_build_placeholder_refresh_secret_0123456789
+          CSRF_SECRET: ci_build_placeholder_csrf_secret_0123456789
+          PAYHERE_MERCHANT_ID: "0000000"
+          PAYHERE_MERCHANT_SECRET: ci_placeholder_secret
+          PAYHERE_CHECKOUT_URL: https://sandbox.payhere.lk/pay/checkout
+          PAYHERE_NOTIFY_URL: https://example.com/api/webhooks/payhere
+          PAYHERE_RETURN_URL: https://example.com/dashboard/billing?status=success
+          PAYHERE_CANCEL_URL: https://example.com/dashboard/billing?status=cancelled

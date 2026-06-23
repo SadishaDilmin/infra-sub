@@ -22,6 +22,10 @@ const subscriptionSchema = new Schema(
     currency: { type: String, default: "LKR" },
 
     payhereSubscriptionId: { type: String, default: null, index: true },
+    // Polar's subscription id + the Polar checkout session id (when
+    // PAYMENT_PROVIDER=polar). Provider-specific link fields live side by side.
+    polarSubscriptionId: { type: String, default: null, index: true },
+    polarCheckoutId: { type: String, default: null },
     // The order_id we generated for the initial checkout (idempotency anchor).
     checkoutOrderId: { type: String, default: null, index: true },
 

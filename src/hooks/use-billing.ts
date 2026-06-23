@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { submitPayhereCheckout } from "@/lib/payhere/checkout-client";
+import { redirectToPolarCheckout } from "@/lib/polar/checkout-client";
 import type { PublicPlan } from "@/features/plans/plan.service";
 import type { PublicInvoice } from "@/features/invoices/invoice.service";
 import type { PublicPayment } from "@/features/payments/payment.service";
@@ -13,9 +14,20 @@ import type {
 type CheckoutResponse = {
   subscriptionId: string;
   orderId: string;
-  actionUrl: string;
-  fields: Record<string, string>;
+  provider: "payhere" | "polar";
+  actionUrl?: string;
+  fields?: Record<string, string>;
+  redirectUrl?: string;
 };
+
+/** Send the browser to the right provider's checkout. */
+function goToCheckout(checkout: CheckoutResponse) {
+  if (checkout.provider === "polar" && checkout.redirectUrl) {
+    redirectToPolarCheckout(checkout.redirectUrl);
+  } else if (checkout.actionUrl && checkout.fields) {
+    submitPayhereCheckout(checkout.actionUrl, checkout.fields);
+  }
+}
 
 type DashboardData = {
   subscription: CurrentSubscription | null;
@@ -92,7 +104,7 @@ export function useStartCheckout() {
         "/api/subscriptions",
         input,
       );
-      submitPayhereCheckout(checkout.actionUrl, checkout.fields);
+      goToCheckout(checkout);
       return checkout;
     },
   });
@@ -105,7 +117,7 @@ export function useChangePlan() {
         "/api/subscriptions/change",
         input,
       );
-      submitPayhereCheckout(checkout.actionUrl, checkout.fields);
+      goToCheckout(checkout);
       return checkout;
     },
   });

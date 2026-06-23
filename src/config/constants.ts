@@ -9,6 +9,19 @@ export const ROLES = {
 } as const;
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
+/**
+ * Active payment provider. PayHere (Sri Lanka, LKR) and Polar (Merchant of
+ * Record, global/USD) are both wired; `PAYMENT_PROVIDER` selects which one
+ * checkout uses. Each has its own webhook route — both can be enabled at the
+ * infra level, but only the selected one initiates new checkouts.
+ */
+export const PAYMENT_PROVIDER = {
+  PAYHERE: "payhere",
+  POLAR: "polar",
+} as const;
+export type PaymentProvider =
+  (typeof PAYMENT_PROVIDER)[keyof typeof PAYMENT_PROVIDER];
+
 export const USER_STATUS = {
   ACTIVE: "ACTIVE",
   SUSPENDED: "SUSPENDED",
