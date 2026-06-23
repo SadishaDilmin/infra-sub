@@ -59,6 +59,16 @@ const serverSchema = z.object({
     .url()
     .default("https://www.payhere.lk/merchant/v1"),
 
+  // Which provider new checkouts use. Both webhook routes stay mounted.
+  PAYMENT_PROVIDER: z.enum(["payhere", "polar"]).default("payhere"),
+
+  // Polar (Merchant of Record). Optional so the app boots without them while
+  // PAYMENT_PROVIDER=payhere; the Polar helpers throw a clear error if selected
+  // without these set. POLAR_SERVER picks the sandbox vs production API host.
+  POLAR_ACCESS_TOKEN: z.string().optional(),
+  POLAR_WEBHOOK_SECRET: z.string().optional(),
+  POLAR_SERVER: z.enum(["sandbox", "production"]).default("sandbox"),
+
   RATE_LIMIT_REDIS_URL: z.string().optional(),
 });
 
